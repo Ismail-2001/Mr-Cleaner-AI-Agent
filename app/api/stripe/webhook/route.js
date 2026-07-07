@@ -43,7 +43,7 @@ export async function POST(req) {
     } catch (err) {
         console.error(`[${requestId}] Webhook signature verification failed:`, err.message);
         return Response.json(
-            { error: { code: 'INVALID_SIGNATURE', message: `Webhook Error: ${err.message}`, request_id: requestId } },
+            { error: { code: 'INVALID_SIGNATURE', message: 'Webhook signature verification failed', request_id: requestId } },
             { status: 400 }
         );
     }
@@ -104,10 +104,6 @@ export async function POST(req) {
 
             // Insert a booking record if we have enough data
             if (metadata.customer_name && metadata.service && metadata.booking_date) {
-                const scheduledAt = new Date(
-                    `${metadata.booking_date} ${metadata.booking_time || '09:00'}`
-                ).toISOString();
-
                 const { error: bookingError } = await supabaseAdmin
                     .from('bookings')
                     .insert([{
@@ -116,7 +112,8 @@ export async function POST(req) {
                         vehicle_type: mergedCustomerData.vehicle_type || 'pending',
                         service: metadata.service,
                         service_price: metadata.deposit_amount * 4,
-                        scheduled_at: scheduledAt,
+                        booking_date: metadata.booking_date,
+                        booking_time: metadata.booking_time || '09:00',
                         address: mergedCustomerData.address || '',
                         zip_code: mergedCustomerData.zip_code || '',
                         status: 'confirmed',

@@ -1,4 +1,5 @@
 import './globals.css';
+import RootErrorBoundary from '@/components/RootErrorBoundary';
 
 export const metadata = {
   title: 'Mr. Cleaner Mobile Detailing | Premium Car Care in Texas',
@@ -9,7 +10,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
-        {children}
+        <RootErrorBoundary>
+          {children}
+        </RootErrorBoundary>
       </body>
     </html>
   );

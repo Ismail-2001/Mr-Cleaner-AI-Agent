@@ -103,3 +103,23 @@ CREATE POLICY "Anon can insert logs" ON usage_logs
   FOR INSERT
   TO anon
   WITH CHECK (true);
+
+-- PERFORMANCE: Index for cleanup queries and analytics
+CREATE INDEX IF NOT EXISTS idx_chat_sessions_last_active ON chat_sessions (last_active);
+CREATE INDEX IF NOT EXISTS idx_usage_logs_session_id ON usage_logs (session_id);
+CREATE INDEX IF NOT EXISTS idx_usage_logs_created_at ON usage_logs (created_at);
+CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings (status);
+
+-- BUSINESS KNOWLEDGE: Stores pricing, service area, and FAQ data that the AI
+-- agent uses to answer customer queries. Service role read/write only.
+-- Falls back to hardcoded data in tools.js if this table is empty.
+CREATE TABLE IF NOT EXISTS business_knowledge (
+  id TEXT PRIMARY KEY,          -- e.g., 'pricing', 'service_area', 'faq'
+  data JSONB NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE business_knowledge ENABLE ROW LEVEL SECURITY;
+
+-- No anon policies = anon cannot read or write business knowledge.
+-- Service role bypasses RLS.

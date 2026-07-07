@@ -11,10 +11,11 @@ export async function GET() {
     const { url, state } = getAuthUrl();
 
     // Set state cookie for CSRF verification on callback
+    const isProduction = process.env.NODE_ENV === 'production';
     const response = redirect(url);
     response.headers.set(
         'Set-Cookie',
-        `oauth_state=${state}; Path=/; HttpOnly; SameSite=Lax; Max-Age=600`
+        `oauth_state=${state}; Path=/; HttpOnly; SameSite=Lax; Max-Age=600${isProduction ? '; Secure' : ''}`
     );
     return response;
 }

@@ -1,6 +1,7 @@
 import { createSessionCookie } from '@/lib/session';
 import { timingSafeEqual } from 'crypto';
 import { validateBody, AuthRequestSchema } from '@/lib/api-validation';
+import { checkLoginRateLimit } from '@/lib/rate-limit';
 
 /**
  * POST /api/dashboard/auth — Server-side password validation.
@@ -12,6 +13,19 @@ import { validateBody, AuthRequestSchema } from '@/lib/api-validation';
  */
 export async function POST(req) {
     const requestId = crypto.randomUUID();
+
+    // RATE LIMITING: 5 login attempts per 15 minutes per IP.
+    // Prevents brute-force attacks on the dashboard password.
+    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    const rateLimit = checkLoginRateLimit(ip);
+    if (rateLimit) {
+        console.log(`[${requestId}] Login rate limited ip=${ip}`);
+        return Response.json(
+            { error: { code: 'RATE_LIMITED', message: `Too many attempts. Try again in ${rateLimit.retryAfterSec}s.`, request_id: requestId } },
+            { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfterSec) } }
+        );
+    }
+
     try {
         // REQUEST VALIDATION: Reject malformed or oversized payloads.
         const body = await req.json();

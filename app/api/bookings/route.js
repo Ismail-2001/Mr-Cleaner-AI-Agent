@@ -4,6 +4,7 @@ import { triggerLeadAlerts } from '@/lib/twilio';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { checkAvailability } from '@/lib/calendar';
 import { validateBody, BookingRequestSchema } from '@/lib/api-validation';
+import { checkBookingRateLimit } from '@/lib/rate-limit';
 
 /**
  * WHY THIS RE-VERIFICATION EXISTS:
@@ -102,6 +103,19 @@ export async function GET(req) {
 
 export async function POST(req) {
     const requestId = crypto.randomUUID();
+
+    // RATE LIMITING: 5 booking attempts per minute per IP.
+    // Prevents spam bookings that burn Twilio SMS credits and flood the calendar.
+    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    const rateLimit = checkBookingRateLimit(ip);
+    if (rateLimit) {
+        console.log(`[${requestId}] Booking rate limited ip=${ip}`);
+        return Response.json(
+            { error: { code: 'RATE_LIMITED', message: `Too many requests. Try again in ${rateLimit.retryAfterSec}s.`, request_id: requestId } },
+            { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfterSec) } }
+        );
+    }
+
     try {
         // REQUEST VALIDATION: Reject malformed booking payloads before
         // they reach the database or business logic.

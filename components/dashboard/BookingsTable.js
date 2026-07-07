@@ -53,14 +53,10 @@ export default function BookingsTable({ bookings = [] }) {
                             <td>
                                 <div className={styles.dateTime}>
                                     <div className={styles.date}>
-                                        {booking.scheduled_at
-                                            ? new Date(booking.scheduled_at).toLocaleDateString()
-                                            : booking.booking_date}
+                                        {booking.booking_date || 'No date'}
                                     </div>
                                     <div className={styles.time}>
-                                        {booking.scheduled_at
-                                            ? new Date(booking.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                                            : booking.booking_time}
+                                        {booking.booking_time || 'No time'}
                                     </div>
                                 </div>
                             </td>
