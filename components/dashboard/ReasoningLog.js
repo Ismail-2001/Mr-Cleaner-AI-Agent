@@ -10,9 +10,12 @@ export default function ReasoningLog() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchLogs = async () => {
-            if (!supabase) return;
+        if (!supabase) {
+            setLoading(false);
+            return;
+        }
 
+        const fetchLogs = async () => {
             const { data, error } = await supabase
                 .from('usage_logs')
                 .select('*')

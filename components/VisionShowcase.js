@@ -10,9 +10,7 @@ export default function VisionShowcase() {
                         <div className={styles.badge}>Next-Gen Intelligence</div>
                         <h2 className={styles.title}>Visual Intelligence <br />for Elite Maintenance</h2>
                         <p className={styles.description}>
-                            Your vehicle deserves more than a standard checklist. Our **Maya AI Vision**
-                            engine analyzes your car's specific paint condition and interior surfaces
-                            from your photos—providing a customized restoration blueprint in seconds.
+                            Your vehicle deserves more than a standard checklist. Our <strong>Maya AI Vision</strong> engine analyzes your car's specific paint condition and interior surfaces from your photos—providing a customized restoration blueprint in seconds.
                         </p>
 
                         <div className={styles.featureList}>

@@ -4,20 +4,20 @@
     right: 40px;
     width: 70px;
     height: 70px;
-    background: var(--terracotta);
-    color: white;
+    background: var(--gold);
+    color: var(--obsidian);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: var(--shadow-lg);
+    box-shadow: 0 10px 30px var(--gold-glow);
     z-index: 1000;
     animation: pulse 2s infinite;
 }
 
 .button:hover {
     transform: scale(1.1);
-    background: var(--terracotta-dark);
+    box-shadow: 0 15px 40px var(--gold-glow);
 }
 
 .tooltip {

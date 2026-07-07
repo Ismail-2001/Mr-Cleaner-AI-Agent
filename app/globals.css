@@ -11,6 +11,7 @@
   --glass-border: rgba(255, 255, 255, 0.1);
   --white: #FFFFFF;
   --success: #30D158;
+  --error: #FF453A;
 
   /* Layout & Glass */
   --max-width: 1400px;
@@ -81,8 +82,8 @@ h6 {
   left: 0;
   right: 0;
   height: 4px;
-  background-image: linear-gradient(45deg, var(--clay) 25%, transparent 25%),
-    linear-gradient(-45deg, var(--clay) 25%, transparent 25%);
+  background-image: linear-gradient(45deg, var(--gold) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--gold) 25%, transparent 25%);
   background-size: 8px 8px;
   opacity: 0.3;
 }
@@ -103,17 +104,17 @@ h6 {
 @keyframes pulse {
   0% {
     transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(194, 83, 46, 0.4);
+    box-shadow: 0 0 0 0 var(--gold-glow);
   }
 
   70% {
     transform: scale(1.05);
-    box-shadow: 0 0 0 10px rgba(194, 83, 46, 0);
+    box-shadow: 0 0 0 10px rgba(212, 175, 55, 0);
   }
 
   100% {
     transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(194, 83, 46, 0);
+    box-shadow: 0 0 0 0 rgba(212, 175, 55, 0);
   }
 }
 
@@ -137,14 +138,16 @@ input,
 textarea,
 select {
   font-family: var(--font-body);
-  border: 1px solid #ddd;
+  border: 1px solid var(--glass-border);
   padding: 12px;
   border-radius: 8px;
   width: 100%;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--platinum);
 }
 
 input:focus,
 textarea:focus {
-  border-color: var(--terracotta);
+  border-color: var(--gold);
   outline: none;
 }
