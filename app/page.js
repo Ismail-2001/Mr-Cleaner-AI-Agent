@@ -3,9 +3,12 @@
 import { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
+import StatsCounter from '../components/StatsCounter';
 import VisionShowcase from '../components/VisionShowcase';
 import ServiceMenu from '../components/ServiceMenu';
 import ValueProps from '../components/ValueProps';
+import Testimonials from '../components/Testimonials';
+import CTASection from '../components/CTASection';
 import ChatButton from '../components/ChatButton';
 import ChatInterface from '../components/ChatInterface';
 
@@ -27,18 +30,37 @@ export default function Home() {
         return () => window.removeEventListener('open-chat', handleOpenChat);
     }, []);
 
+    // Scroll Reveal Observer
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    }
+                });
+            },
+            { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
+        );
+
+        document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
+        return () => observer.disconnect();
+    }, []);
+
     return (
-        <main style={{ backgroundColor: 'var(--obsidian)' }}>
+        <main className="grain" style={{ backgroundColor: 'var(--obsidian)' }}>
             <Navbar />
             <Hero />
+            <StatsCounter />
 
             <section id="experience">
                 <VisionShowcase />
             </section>
 
             <ServiceMenu />
-
             <ValueProps />
+            <Testimonials />
+            <CTASection />
 
             <ChatButton />
 
@@ -58,43 +80,67 @@ export default function Home() {
                 <div className="container">
                     <div style={{
                         display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                        gap: '60px',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                        gap: '48px',
                         marginBottom: '60px',
                         textAlign: 'left'
                     }}>
                         <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-                                <span style={{ background: 'var(--gold)', color: 'var(--obsidian)', padding: '2px 6px', borderRadius: '4px', fontWeight: '800' }}>MC</span>
-                                <h3 style={{ margin: 0 }}>Mr. Cleaner</h3>
+                                <span style={{
+                                    background: 'var(--gold)',
+                                    color: 'var(--obsidian)',
+                                    padding: '6px 10px',
+                                    borderRadius: '8px',
+                                    fontWeight: '800',
+                                    fontSize: '0.85rem',
+                                    fontFamily: 'var(--font-heading)'
+                                }}>MC</span>
+                                <h3 style={{ margin: 0, fontSize: '1.2rem' }}>Mr. Cleaner</h3>
                             </div>
-                            <p style={{ color: '#666', lineHeight: '1.6', fontSize: '0.9rem' }}>
-                                Texas' premier mobile detailing concierge. Powered by AI, perfected by hand.
+                            <p style={{ color: 'rgba(255,255,255,0.4)', lineHeight: '1.7', fontSize: '0.9rem', maxWidth: '280px' }}>
+                                Texas&apos; premier mobile detailing concierge. Powered by AI, perfected by hand.
                             </p>
                         </div>
                         <div>
-                            <h4 style={{ marginBottom: '20px', color: 'var(--white)' }}>Contact</h4>
-                            <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '10px' }}>Austin • Dallas • Houston</p>
-                            <p style={{ color: 'var(--gold)', fontSize: '0.9rem' }}>concierge@mrcleaner.com</p>
+                            <h4 style={{ marginBottom: '20px', color: 'var(--white)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1.5px' }}>Services</h4>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {['Executive Preservation', 'The Master Detail', 'Signature Ceramic'].map((s) => (
+                                    <a key={s} href="#services" style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem', textDecoration: 'none', transition: 'color 0.2s' }}>{s}</a>
+                                ))}
+                            </div>
                         </div>
                         <div>
-                            <h4 style={{ marginBottom: '20px', color: 'var(--white)' }}>Technology</h4>
-                            <p style={{ color: '#666', fontSize: '0.9rem' }}>Maya Vision Support Active</p>
-                            <p style={{ color: '#666', fontSize: '0.9rem' }}>Real-time Calendar Sync</p>
+                            <h4 style={{ marginBottom: '20px', color: 'var(--white)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1.5px' }}>Contact</h4>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem' }}>Austin &bull; Dallas &bull; Houston</p>
+                                <a href="mailto:concierge@mrcleaner.com" style={{ color: 'var(--gold)', fontSize: '0.9rem', textDecoration: 'none' }}>concierge@mrcleaner.com</a>
+                                <a href="tel:+15074797804" style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem', textDecoration: 'none' }}>+1 (507) 479-7804</a>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 style={{ marginBottom: '20px', color: 'var(--white)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1.5px' }}>Hours</h4>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem' }}>Mon - Sat: 8 AM - 6 PM</p>
+                                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem' }}>Sunday: Closed</p>
+                                <p style={{ color: 'var(--gold)', fontSize: '0.9rem' }}>AI Concierge: 24/7</p>
+                            </div>
                         </div>
                     </div>
 
                     <div style={{
-                        paddingTop: '40px',
-                        borderTop: '1px solid rgba(255,255,255,0.05)',
+                        paddingTop: '32px',
+                        borderTop: '1px solid rgba(255,255,255,0.06)',
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: '16px',
                         fontSize: '0.8rem',
-                        color: '#444'
+                        color: 'rgba(255,255,255,0.2)'
                     }}>
-                        <p>© 2026 Mr. Cleaner Mobile Detailing Texas.</p>
-                        <p>Designed by Advanced Agentic Systems Engineers</p>
+                        <p>&copy; 2026 Mr. Cleaner Mobile Detailing Texas. All rights reserved.</p>
+                        <p>Built with AI &bull; Powered by Maya</p>
                     </div>
                 </div>
             </footer>

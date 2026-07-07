@@ -1,16 +1,16 @@
 import styles from './VisionShowcase.module.css';
-import { Camera, Zap, ShieldCheck, Sparkles } from 'lucide-react';
+import { Camera, Zap, ShieldCheck } from 'lucide-react';
 
 export default function VisionShowcase() {
     return (
         <section className={styles.section}>
             <div className="container">
                 <div className={styles.grid}>
-                    <div className={styles.content}>
+                    <div className={`${styles.content} reveal`}>
                         <div className={styles.badge}>Next-Gen Intelligence</div>
-                        <h2 className={styles.title}>Visual Intelligence <br />for Elite Maintenance</h2>
+                        <h2 className={styles.title}>Visual Intelligence<br />for Elite Maintenance</h2>
                         <p className={styles.description}>
-                            Your vehicle deserves more than a standard checklist. Our <strong>Maya AI Vision</strong> engine analyzes your car's specific paint condition and interior surfaces from your photos—providing a customized restoration blueprint in seconds.
+                            Your vehicle deserves more than a standard checklist. Our <strong>Maya AI Vision</strong> engine analyzes your car&apos;s specific paint condition and interior surfaces from your photos—providing a customized restoration blueprint in seconds.
                         </p>
 
                         <div className={styles.featureList}>
@@ -38,7 +38,7 @@ export default function VisionShowcase() {
                         </div>
                     </div>
 
-                    <div className={styles.visualContainer}>
+                    <div className={`${styles.visualContainer} reveal`}>
                         <div className={styles.glassFrame}>
                             <div className={styles.aiOverlay}>
                                 <div className={styles.scanLine}></div>
@@ -46,8 +46,9 @@ export default function VisionShowcase() {
                                 <div className={styles.point2}><span>2024 Model Sync</span></div>
                                 <div className={styles.point3}><span>Elite Package Recommended</span></div>
                             </div>
-                            {/* In a real app, this would be a high-end image of a car being scanned */}
-                            <div className={styles.mockImg}></div>
+                            <div className={styles.mockImg}>
+                                <div className={styles.gridLines}></div>
+                            </div>
                         </div>
                         <div className={styles.glowEffect}></div>
                     </div>
