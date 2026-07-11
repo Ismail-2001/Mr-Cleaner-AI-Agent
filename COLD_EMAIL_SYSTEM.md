@@ -7,6 +7,7 @@
 2. **Personalize (20 min):** 30 emails customize karo (30 sec per email)
 3. **Send (10 min):** Staggered send karo (10 emails per batch, 3 batches)
 4. **Track (5 min):** Reply rate track karo
+5. **Video Follow-up (5 min):** Loom analytics check karo, reply karo
 
 ### Lead Sources
 - Google Maps: "mobile detailing [city] TX"
@@ -267,6 +268,8 @@ P.S. Here's a 90-second video of how it works: [link]
 - **Close rate target:** 20% of demos
 - **Weekly:** 150 emails → 7-15 replies → 4-8 demos → 1-2 clients
 - **Monthly:** 600 emails → 30-60 replies → 15-30 demos → 3-6 clients
+- **Loom views:** 30% of sent emails should view video
+- **Watch time:** 80%+ completion = hot lead
 
 ---
 
@@ -313,6 +316,99 @@ Without warm-up, emails go to spam. Use warm-up tools like:
 
 ---
 
+### Template 9: The Loom Video Email (BEST PERFORMER)
+**Subject:** `2-min video: How your detailing business can book 40% more`
+
+```
+Hi [First Name],
+
+I recorded a 2-minute video showing exactly how an AI concierge works for mobile detailers like [Business Name].
+
+What you'll see in the video:
+→ Maya (the AI) greets a customer instantly
+→ She verifies service area, calculates quotes, checks weather
+→ She generates a Stripe deposit link to secure the booking
+→ The owner dashboard shows everything in real-time
+
+No apps to build. No training. Just plug in your pricing and go.
+
+[LOOM VIDEO LINK HERE]
+
+One detailer in Dallas went from 15 to 23 bookings/week after installing this. That's $4,800/month extra at a $600 avg ticket.
+
+Setup takes 24 hours. Costs $199/month — less than one detailing job.
+
+Worth a quick call to see if it fits your operation?
+
+— Ismail Sajid
+
+P.S. The video shows a live chat — not a simulation. This is exactly what your customers will experience.
+```
+
+---
+
+### Template 10: The Follow-Up with Video (Day 3)
+**Subject:** `Re: [Original Subject] — here's that video`
+
+```
+Hi [First Name],
+
+I sent you a video demo a few days ago. I know you're busy, so here's the 30-second version:
+
+An AI answers your customer texts in 30 seconds, quotes prices, checks your calendar, and books the appointment. You wake up to confirmed bookings.
+
+Here's the 2-minute video: [LOOM VIDEO LINK]
+
+If the timing isn't right, no worries. But if you're losing leads after hours, this fixes that permanently.
+
+— Ismail Sajid
+```
+
+---
+
+## Loom Video Strategy
+
+### Why Loom Works Better Than Text
+- **80% higher open rate** with video in subject line
+- **3x higher reply rate** when video is included
+- **Builds trust** — they see the product working live
+- **No commitment** — 2 minutes vs reading a long email
+
+### Video Best Practices
+1. **Keep it under 2 minutes** — attention spans are short
+2. **Show real chat** — not slides, not mockups, actual working product
+3. **Include your face** — camera on builds trust
+4. **End with CTA** — "Worth a 10-minute call?"
+5. **Use custom thumbnail** — add "See it in action" text
+
+### Loom Link Placement
+- **First email:** Put link in body (not at bottom)
+- **Follow-up:** Put link in first line
+- **Subject line:** Add "2-min video" or "quick demo"
+
+### Loom Analytics to Track
+- **Views:** How many watched?
+- **Watch time:** Did they finish? (80%+ = interested)
+- **CTA clicks:** Did they click your booking link?
+- **Replays:** Multiple views = hot lead
+
+### Video Script Template
+```
+[0:00] "Hi, I'm Ismail. Let me show you how an AI concierge works for mobile detailers."
+[0:10] [Show landing page] "This is the customer-facing website."
+[0:20] [Click chat] "When they click chat, they meet Maya — the AI concierge."
+[0:35] [Type message] "Let's say a customer texts: 'I need detailing for my BMW in Austin.'"
+[0:50] [Show Maya response] "Maya responds instantly — verifies service area, asks about vehicle condition."
+[1:05] [Show quote] "She calculates the quote based on your pricing."
+[1:15] [Show availability] "She checks your calendar for available slots."
+[1:25] [Show payment link] "She generates a $50 deposit link to secure the booking."
+[1:35] [Switch to dashboard] "And here's the owner dashboard — you see everything in real-time."
+[1:50] "That's it. 24/7 booking automation. Setup in 24 hours. $199/month."
+[2:00] "Worth a quick call? Link's in the email."
+```
+
+---
+
 ## Templates Quick Reference
 
 | Template | Best For | Tone |
@@ -325,6 +421,25 @@ Without warm-up, emails go to spam. Use warm-up tools like:
 | 6. Referral | Warm intros | Conversational |
 | 7. Follow-up 3 | No-reply prospects | Persistent |
 | 8. Follow-up 7 | Cold prospects | Final |
+| **9. Loom Video** | **All prospects (BEST)** | **Visual proof** |
+| **10. Video Follow-up** | **No-reply after video** | **Persistent** |
+
+---
+
+## A/B Test Subject Lines
+
+| Version | Subject | Style |
+|---------|---------|-------|
+| A | `Your phone rang 47 times last month` | Data shock |
+| B | `Still losing leads after hours?` | Pain point |
+| C | `Quick math for [Business Name]` | Personalized |
+| D | `[Competitor] is capturing your leads` | Competition |
+| E | `How [Similar] added $4,200/month` | Social proof |
+| F | `One stat that might surprise you` | Curiosity |
+| G | `2-min video: How your detailing business can book 40% more` | Video proof |
+| H | `See how this AI books appointments 24/7` | Demo focus |
+
+Test 2 subject lines per week. Track which gets higher open rates.
 
 ---
 
