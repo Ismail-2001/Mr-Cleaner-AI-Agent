@@ -42,6 +42,8 @@ export async function GET() {
             revenueByDay,
             serviceDistribution,
             bookings: bookingData.data || [],
+        }, {
+            headers: { 'Cache-Control': 'private, max-age=60, stale-while-revalidate=120' },
         });
     } catch (error) {
         console.error('Analytics API error:', error.message);

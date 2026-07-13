@@ -92,6 +92,8 @@ export async function GET(req) {
 
         return Response.json({
             bookings: data || []
+        }, {
+            headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=60' },
         });
     } catch (error) {
         console.error(`[${requestId}] GET /api/bookings error:`, error.message);

@@ -60,7 +60,7 @@ export default function BookingSummary({ data, onConfirm, onCancel }) {
                         Adjust Details
                     </button>
                     <a
-                        href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '15074797804'}?text=Hi, I'm booking a ${data.service} for my ${data.vehicle_type}. I have a few custom questions.`}
+                        href={`https://wa.me/15074797804?text=Hi, I'm booking a ${data.service} for my ${data.vehicle_type}. I have a few custom questions.`}
                         target="_blank"
                         className={styles.waBtn}
                     >

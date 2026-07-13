@@ -62,5 +62,6 @@ export async function GET() {
 
     return Response.json(health, {
         status: health.status === 'ok' ? 200 : 207,
+        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' },
     });
 }

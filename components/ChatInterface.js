@@ -7,6 +7,23 @@ import BookingSummary from './BookingSummary';
 import ErrorBoundary from './ErrorBoundary';
 import { supabase } from '@/lib/supabase';
 
+function formatMessage(text) {
+    if (!text || typeof text !== 'string') return text;
+    const parts = text.split(/(\*\*[^*]+\*\*)/g);
+    return parts.map((part, i) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+            return <strong key={i}>{part.slice(2, -2)}</strong>;
+        }
+        const italicParts = part.split(/(\*[^*]+\*)/g);
+        return italicParts.map((subPart, j) => {
+            if (subPart.startsWith('*') && subPart.endsWith('*') && !subPart.startsWith('**')) {
+                return <em key={`${i}-${j}`}>{subPart.slice(1, -1)}</em>;
+            }
+            return subPart;
+        });
+    });
+}
+
 /**
  * SESSION ID MANAGEMENT:
  * Previously, the session ID was generated client-side in localStorage. A malicious
@@ -235,7 +252,7 @@ export default function ChatInterface({ onClose, initialMessage }) {
                     {messages.map((msg, i) => (
                         <div key={i} className={`${styles.messageRow} ${msg.role === 'user' ? styles.userRow : styles.botRow}`}>
                             <div className={styles.messageBubble}>
-                                {msg.content}
+                                {formatMessage(msg.content)}
                             </div>
                         </div>
                     ))}
