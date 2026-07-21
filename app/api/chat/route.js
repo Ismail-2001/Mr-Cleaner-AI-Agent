@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nextjs';
 import { OpenAI } from 'openai';
 import { generateMayaPrompt } from '@/lib/ai-agent';
 import { MAYA_TOOLS, executeTool } from '@/lib/tools';
@@ -297,6 +298,7 @@ export async function POST(req) {
             requestId,
             timestamp: new Date().toISOString()
         }));
+        Sentry.captureException(error, { tags: { route: 'chat', code: 'ORCHESTRATOR_ERROR', requestId, sessionId } });
         return Response.json({
             role: 'assistant',
             content: "I'm having a little trouble orchestrating my tools. Please try again or reach out to us directly!",

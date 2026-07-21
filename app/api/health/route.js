@@ -1,44 +1,44 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-/**
- * GET /api/health — Health check endpoint for monitoring.
- * Returns the status of critical dependencies: Supabase, AI keys, Stripe.
- */
 export async function GET() {
-    const health = {
-        status: 'ok',
-        timestamp: new Date().toISOString(),
-        checks: {},
-    };
+    const checks = {};
 
     // Supabase
     try {
         if (supabaseAdmin) {
             const { error } = await supabaseAdmin.from('bookings').select('id').limit(1);
-            health.checks.supabase = error ? 'degraded' : 'healthy';
+            checks.supabase = error ? 'degraded' : 'connected';
         } else {
-            health.checks.supabase = 'not_configured';
+            checks.supabase = 'not_configured';
         }
     } catch {
-        health.checks.supabase = 'unhealthy';
+        checks.supabase = 'unhealthy';
     }
 
-    // AI Keys
-    health.checks.gemini = process.env.GEMINI_API_KEY ? 'configured' : 'not_configured';
-    health.checks.deepseek = process.env.DEEPSEEK_API_KEY ? 'configured' : 'not_configured';
-    health.checks.openai = process.env.OPENAI_API_KEY ? 'configured' : 'not_configured';
-    health.checks.hasAI = !!(process.env.GEMINI_API_KEY || process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY);
+    // AI
+    const hasGemini = !!process.env.GEMINI_API_KEY;
+    const hasDeepSeek = !!process.env.DEEPSEEK_API_KEY;
+    const hasOpenAI = !!process.env.OPENAI_API_KEY;
+    checks.ai = hasGemini || hasDeepSeek || hasOpenAI ? 'connected' : 'not_configured';
+    checks.gemini = hasGemini ? 'configured' : 'not_configured';
+    checks.deepseek = hasDeepSeek ? 'configured' : 'not_configured';
+    checks.openai = hasOpenAI ? 'configured' : 'not_configured';
 
     // Stripe
-    health.checks.stripe = process.env.STRIPE_SECRET_KEY ? 'configured' : 'not_configured';
+    checks.stripe = process.env.STRIPE_SECRET_KEY ? 'configured' : 'not_configured';
 
     // Dashboard auth
-    health.checks.dashboard = (process.env.DASHBOARD_PASSWORD && process.env.DASHBOARD_SESSION_SECRET)
+    checks.dashboard = (process.env.DASHBOARD_PASSWORD && process.env.DASHBOARD_SESSION_SECRET)
         ? 'configured'
         : 'not_configured';
 
     // Integrations
-    health.checks.weather_api = process.env.OPENWEATHER_API_KEY ? 'configured' : 'not_configured';
+    checks.weather_api = process.env.OPENWEATHER_API_KEY ? 'configured' : 'not_configured';
+    checks.twilio = (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN)
+        ? 'configured'
+        : 'not_configured';
+    checks.resend = process.env.RESEND_API_KEY ? 'configured' : 'not_configured';
+
     try {
         if (supabaseAdmin) {
             const { data: tokenData } = await supabaseAdmin
@@ -46,22 +46,23 @@ export async function GET() {
                 .select('id')
                 .eq('id', 'google_tokens')
                 .maybeSingle();
-            health.checks.google_calendar = tokenData ? 'configured' : 'not_configured';
+            checks.calendar = tokenData ? 'configured' : 'not_configured';
         } else {
-            health.checks.google_calendar = 'not_configured';
+            checks.calendar = 'not_configured';
         }
     } catch {
-        health.checks.google_calendar = 'unhealthy';
+        checks.calendar = 'unhealthy';
     }
 
-    // Overall status
-    const values = Object.values(health.checks);
-    if (values.includes('unhealthy')) {
-        health.status = 'degraded';
-    }
+    const values = Object.values(checks);
+    const status = values.includes('unhealthy') ? 'degraded' : 'ok';
 
-    return Response.json(health, {
-        status: health.status === 'ok' ? 200 : 207,
+    return Response.json({
+        status,
+        timestamp: new Date().toISOString(),
+        ...checks,
+    }, {
+        status: status === 'ok' ? 200 : 207,
         headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' },
     });
 }

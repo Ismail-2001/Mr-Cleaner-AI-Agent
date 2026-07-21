@@ -1,6 +1,8 @@
+import * as Sentry from '@sentry/nextjs';
 import { stripe } from '@/lib/stripe';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { triggerLeadAlerts } from '@/lib/twilio';
+import { sendBookingConfirmation } from '@/lib/email';
 
 /**
  * POST /api/stripe/webhook — Stripe webhook handler for payment confirmation.
@@ -42,6 +44,7 @@ export async function POST(req) {
         );
     } catch (err) {
         console.error(`[${requestId}] Webhook signature verification failed:`, err.message);
+        Sentry.captureException(err, { tags: { route: 'webhook', code: 'INVALID_SIGNATURE', requestId } });
         return Response.json(
             { error: { code: 'INVALID_SIGNATURE', message: 'Webhook signature verification failed', request_id: requestId } },
             { status: 400 }
@@ -157,6 +160,19 @@ export async function POST(req) {
                     booking_time: metadata.booking_time,
                     lead_score: 80,
                 });
+
+                const customerEmail = session.customer_details?.email || mergedCustomerData.email;
+                if (customerEmail) {
+                    await sendBookingConfirmation({
+                        email: customerEmail,
+                        customerName: metadata.customer_name,
+                        service: metadata.service,
+                        servicePrice,
+                        bookingDate: metadata.booking_date,
+                        bookingTime: metadata.booking_time || '09:00',
+                        address: mergedCustomerData.address,
+                    });
+                }
             }
         }
     }
