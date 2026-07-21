@@ -92,11 +92,12 @@
 }
 
 .title {
-    font-size: clamp(3.5rem, 10vw, 6.5rem);
+    font-size: clamp(3.5rem, 10vw, 7rem);
     margin-bottom: 32px;
-    letter-spacing: -3px;
-    font-weight: 900;
+    letter-spacing: 2px;
+    font-weight: 400;
     line-height: 1.05;
+    text-transform: uppercase;
 }
 
 .highlight {
