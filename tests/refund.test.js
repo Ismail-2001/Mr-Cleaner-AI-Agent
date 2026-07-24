@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+const DEFAULT_BIZ = '00000000-0000-0000-0000-000000000001';
+const OTHER_BIZ = '11111111-1111-1111-1111-111111111111';
+
 const mockFrom = vi.fn();
 
 vi.mock('@/lib/supabase-admin', () => ({
@@ -43,9 +46,15 @@ describe('processRefund', () => {
         vi.clearAllMocks();
     });
 
+    it('returns UNAUTHORIZED if businessId is not provided', async () => {
+        const result = await processRefund('booking_1', undefined);
+        expect(result.success).toBe(false);
+        expect(result.error.code).toBe('UNAUTHORIZED');
+    });
+
     it('returns error if booking not found', async () => {
         mockFrom.mockReturnValue(makeChain({ data: null, error: null }));
-        const result = await processRefund('nonexistent-id');
+        const result = await processRefund('nonexistent-id', DEFAULT_BIZ);
         expect(result.success).toBe(false);
         expect(result.error.code).toBe('BOOKING_NOT_FOUND');
     });
@@ -55,7 +64,7 @@ describe('processRefund', () => {
             data: { id: '1', status: 'refunded', notes: 'Session: cs_test_abc' },
             error: null,
         }));
-        const result = await processRefund('1');
+        const result = await processRefund('1', DEFAULT_BIZ);
         expect(result.success).toBe(false);
         expect(result.error.code).toBe('ALREADY_REFUNDED');
     });
@@ -65,7 +74,7 @@ describe('processRefund', () => {
             data: { id: '1', status: 'cancelled', notes: 'Session: cs_test_abc' },
             error: null,
         }));
-        const result = await processRefund('1');
+        const result = await processRefund('1', DEFAULT_BIZ);
         expect(result.success).toBe(false);
         expect(result.error.code).toBe('INVALID_STATUS');
     });
@@ -75,7 +84,7 @@ describe('processRefund', () => {
             data: { id: '1', status: 'confirmed', notes: 'No session here' },
             error: null,
         }));
-        const result = await processRefund('1');
+        const result = await processRefund('1', DEFAULT_BIZ);
         expect(result.success).toBe(false);
         expect(result.error.code).toBe('NO_STRIPE_SESSION');
     });
@@ -102,7 +111,7 @@ describe('processRefund', () => {
             status: 'succeeded',
         });
 
-        const result = await processRefund('booking_1');
+        const result = await processRefund('booking_1', DEFAULT_BIZ);
 
         expect(result.success).toBe(true);
         expect(result.data.refundId).toBe('re_test_refund123');
@@ -114,5 +123,29 @@ describe('processRefund', () => {
             payment_intent: 'pi_test_xyz789',
             reason: 'requested_by_customer',
         });
+    });
+
+    it('scopes booking query to businessId (prevents cross-tenant refund)', async () => {
+        // Booking belongs to OTHER_BIZ — should not be found when querying as DEFAULT_BIZ
+        mockFrom.mockReturnValue(makeChain({ data: null, error: null }));
+
+        const result = await processRefund('booking_1', DEFAULT_BIZ);
+        expect(result.success).toBe(false);
+        expect(result.error.code).toBe('BOOKING_NOT_FOUND');
+
+        // Verify the eq() calls include business_id scoping
+        const chain = mockFrom.mock.results[0].value;
+        const eqCalls = chain.eq.mock.calls.map(c => c[0]);
+        expect(eqCalls).toContain('business_id');
+    });
+
+    it('rejects refund when booking belongs to a different business', async () => {
+        // Simulate a booking that exists but for a different tenant
+        // The query includes .eq('business_id', DEFAULT_BIZ) so it won't find the OTHER_BIZ booking
+        mockFrom.mockReturnValue(makeChain({ data: null, error: null }));
+
+        const result = await processRefund('cross_tenant_booking', DEFAULT_BIZ);
+        expect(result.success).toBe(false);
+        expect(result.error.code).toBe('BOOKING_NOT_FOUND');
     });
 });

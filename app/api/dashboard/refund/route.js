@@ -1,11 +1,17 @@
 import { verifySession, COOKIE_NAME } from '@/lib/session';
 import { processRefund } from '@/lib/refund';
+import { DEFAULT_BUSINESS_ID } from '@/lib/tenant';
 
 /**
  * POST /api/dashboard/refund
  *
  * Issues a Stripe refund for a booking and updates its status to 'refunded'.
  * Only the dashboard owner (authenticated via session cookie) can call this.
+ *
+ * SECURITY: businessId is passed to processRefund() to scope the booking query.
+ * The booking must belong to this business — prevents cross-tenant refund attacks.
+ * Currently single-tenant (DEFAULT_BUSINESS_ID); future multi-tenant dashboards
+ * will resolve from session/JWT claim.
  *
  * Body: { bookingId: string }
  */
@@ -34,9 +40,12 @@ export async function POST(req) {
             );
         }
 
-        console.log(`[${requestId}] Processing refund for booking: ${bookingId}`);
+        // Business scope — booking must belong to this business (prevents cross-tenant refund)
+        const businessId = DEFAULT_BUSINESS_ID;
 
-        const result = await processRefund(bookingId);
+        console.log(`[${requestId}] Processing refund for booking: ${bookingId} (business: ${businessId})`);
+
+        const result = await processRefund(bookingId, businessId);
 
         if (!result.success) {
             const statusMap = {
