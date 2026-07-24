@@ -20,6 +20,7 @@
 import * as Sentry from '@sentry/nextjs';
 import { getJobberAuthUrl, exchangeJobberCode, verifyJobberWebhook, parseJobberEvent, syncBookingToJobber } from '@/lib/jobber';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { tryRedisOp } from '@/lib/redis';
 import crypto from 'crypto';
 
 // ─── GET: OAuth Initiation ───────────────────────────────────────────────────
@@ -75,7 +76,38 @@ export async function POST(req) {
 
         console.log(`[${requestId}] Jobber event: ${event.type}`);
 
-        // Handle job updates — sync status back to our bookings table
+        // Try QStash for reliable async processing
+        const qstashToken = process.env.QSTASH_TOKEN;
+        if (qstashToken) {
+            try {
+                const { Client } = await import('@upstash/qstash');
+                const client = new Client({ token: qstashToken });
+                await client.publishJSON({
+                    url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://mr-cleaner.vercel.app'}/api/integrations/jobber/process`,
+                    body: { requestId, event },
+                    retries: 3,
+                });
+                console.log(`[${requestId}] Jobber event dispatched to QStash`);
+                return Response.json({ status: 'ok', event_type: event.type, async: true });
+            } catch (qstashErr) {
+                console.warn(`[${requestId}] QStash publish failed, falling back to sync:`, qstashErr.message);
+            }
+        }
+
+        // Fallback: synchronous processing
+        await processJobberEvent(event, requestId);
+        return Response.json({ status: 'ok', event_type: event.type });
+    } catch (error) {
+        console.error(`[${requestId}] Jobber webhook error:`, error.message);
+        Sentry.captureException(error, { tags: { module: 'jobber-webhook', requestId } });
+        return Response.json({ status: 'ok' }); // Always 200 to prevent retries
+    }
+}
+
+// ─── Event Processing (shared between sync + async paths) ────────────────────
+
+async function processJobberEvent(event, requestId) {
+    try {
         if (event.type === 'job_update' && event.jobId && supabaseAdmin) {
             const statusMap = {
                 'scheduled': 'confirmed',
@@ -86,7 +118,6 @@ export async function POST(req) {
 
             const ourStatus = statusMap[event.status];
             if (ourStatus) {
-                // Find the booking linked to this Jobber job
                 const { data: integration } = await supabaseAdmin
                     .from('bookings')
                     .select('id')
@@ -104,15 +135,10 @@ export async function POST(req) {
             }
         }
 
-        // Handle invoice updates
         if (event.type === 'invoice_update') {
             console.log(`[${requestId}] Jobber invoice ${event.invoiceId}: ${event.status}`);
         }
-
-        return Response.json({ status: 'ok', event_type: event.type });
     } catch (error) {
-        console.error(`[${requestId}] Jobber webhook error:`, error.message);
-        Sentry.captureException(error, { tags: { module: 'jobber-webhook', requestId } });
-        return Response.json({ status: 'ok' }); // Always 200 to prevent retries
+        console.error(`[${requestId}] processJobberEvent error:`, error.message);
     }
 }

@@ -164,6 +164,7 @@ export async function POST(req) {
                     booking_date: metadata.booking_date,
                     booking_time: metadata.booking_time,
                     lead_score: 80,
+                    language: mergedCustomerData.language || 'en',
                 });
 
                 const customerEmail = session.customer_details?.email || mergedCustomerData.email;
@@ -176,6 +177,7 @@ export async function POST(req) {
                         bookingDate: metadata.booking_date,
                         bookingTime: metadata.booking_time || '09:00',
                         address: mergedCustomerData.address,
+                        language: mergedCustomerData.language || 'en',
                     });
                 }
             }

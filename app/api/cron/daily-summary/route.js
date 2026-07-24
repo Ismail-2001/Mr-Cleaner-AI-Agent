@@ -1,16 +1,19 @@
-import { sendDailySummary } from '@/lib/twilio';
-import { supabaseAdmin } from '@/lib/supabase-admin';
-
 /**
  * POST /api/cron/daily-summary
  *
  * Triggered by Vercel Cron or external scheduler.
  * Sends a daily booking digest to each active business owner.
  *
+ * RELIABILITY:
+ * - Publishes to QStash for async processing with retries (3 attempts)
+ * - Falls back to synchronous processing if QStash unavailable
+ *
  * Auth: Requires CRON_SECRET header to prevent unauthorized calls.
  *
  * Cron schedule (vercel.json): "0 20 * * *" = 8 PM CT daily
  */
+import { sendDailySummary } from '@/lib/twilio';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 export async function POST(req) {
     // CRON AUTH: Only allow calls with the secret
     const authHeader = req.headers.get('authorization');
@@ -56,6 +59,25 @@ export async function POST(req) {
 
         console.log(`Daily summary cron: processing ${businesses.length} business(es)`);
 
+        // Try QStash for reliable async processing
+        const qstashToken = process.env.QSTASH_TOKEN;
+        if (qstashToken) {
+            try {
+                const { Client } = await import('@upstash/qstash');
+                const client = new Client({ token: qstashToken });
+                await client.publishJSON({
+                    url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://mr-cleaner.vercel.app'}/api/cron/daily-summary/process`,
+                    body: { businesses },
+                    retries: 3,
+                });
+                console.log('Daily summary cron: dispatched to QStash for async processing');
+                return Response.json({ success: true, async: true, count: businesses.length });
+            } catch (qstashErr) {
+                console.warn('Daily summary cron: QStash publish failed, falling back to sync:', qstashErr.message);
+            }
+        }
+
+        // Fallback: synchronous processing
         const results = [];
         for (const biz of businesses) {
             const result = await sendDailySummary(biz.id);

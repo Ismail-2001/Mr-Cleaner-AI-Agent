@@ -86,6 +86,9 @@ CREATE INDEX IF NOT EXISTS idx_bookings_sms_consent
 ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'web';
 CREATE INDEX IF NOT EXISTS idx_chat_sessions_source ON chat_sessions (source);
 
+-- Language preference for bilingual support (en/es)
+ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS language TEXT DEFAULT 'en';
+
 -- Meta integration: page_id and instagram_id for business resolution
 ALTER TABLE businesses ADD COLUMN IF NOT EXISTS page_id TEXT;
 ALTER TABLE businesses ADD COLUMN IF NOT EXISTS instagram_id TEXT;

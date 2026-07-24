@@ -5,7 +5,7 @@ import {
     PieChart, Pie, Cell, LineChart, Line
 } from 'recharts';
 import styles from './Analytics.module.css';
-import { TrendingUp, Users, DollarSign, Star } from 'lucide-react';
+import { TrendingUp, Users, DollarSign, Star, Download, ArrowUp, ArrowDown } from 'lucide-react';
 
 import { useState, useEffect } from 'react';
 
@@ -15,6 +15,9 @@ export default function Analytics() {
     const [logs, setLogs] = useState([]);
     const [stats, setStats] = useState({ revenue: 0, conversion: 0, inspections: 0, bookings: 0 });
     const [data, setData] = useState({ revenueByDay: [], serviceDistribution: [] });
+    const [trend, setTrend] = useState({ revenue: { current: 0, previous: 0, change: 0 }, bookings: { current: 0, previous: 0, change: 0 } });
+    const [repeatCustomers, setRepeatCustomers] = useState([]);
+    const [totalUniqueCustomers, setTotalUniqueCustomers] = useState(0);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -25,6 +28,9 @@ export default function Analytics() {
                 setLogs(json.logs || []);
                 setStats(prev => ({ ...prev, ...json.stats }));
                 setData({ revenueByDay: json.revenueByDay || [], serviceDistribution: json.serviceDistribution || [] });
+                setTrend(json.trend || { revenue: { current: 0, previous: 0, change: 0 }, bookings: { current: 0, previous: 0, change: 0 } });
+                setRepeatCustomers(json.repeatCustomers || []);
+                setTotalUniqueCustomers(json.totalUniqueCustomers || 0);
             } catch {
                 // Analytics unavailable - show empty state
             }
@@ -33,9 +39,13 @@ export default function Analytics() {
         fetchData();
     }, []);
 
+    const handleExportCSV = () => {
+        window.open('/api/dashboard/analytics/export', '_blank');
+    };
+
     return (
         <div className={styles.container}>
-            {/* Maya Intelligence KPI Cards (Revenue ROI Calculator) */}
+            {/* KPI Cards */}
             <div className={styles.kpiGrid}>
                 <div className={styles.kpiCard}>
                     <div className={`${styles.kpiIcon} ${styles.gold}`}>
@@ -44,7 +54,14 @@ export default function Analytics() {
                     <div className={styles.kpiData}>
                         <span>Total Revenue</span>
                         <h3>${stats.revenue.toLocaleString()}</h3>
-                        <p className={styles.subtext}>From confirmed bookings</p>
+                        <p className={styles.subtext}>
+                            {trend.revenue.change !== 0 && (
+                                <span style={{ color: trend.revenue.change > 0 ? '#4ade80' : '#f87171' }}>
+                                    {trend.revenue.change > 0 ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
+                                    {Math.abs(trend.revenue.change)}% vs last week
+                                </span>
+                            )}
+                        </p>
                     </div>
                 </div>
                 <div className={styles.kpiCard}>
@@ -54,11 +71,28 @@ export default function Analytics() {
                     <div className={styles.kpiData}>
                         <span>Total Bookings</span>
                         <h3>{stats.bookings}</h3>
-                        <p className={styles.subtext}>All time bookings</p>
+                        <p className={styles.subtext}>
+                            {trend.bookings.change !== 0 && (
+                                <span style={{ color: trend.bookings.change > 0 ? '#4ade80' : '#f87171' }}>
+                                    {trend.bookings.change > 0 ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
+                                    {Math.abs(trend.bookings.change)}% vs last week
+                                </span>
+                            )}
+                        </p>
                     </div>
                 </div>
                 <div className={styles.kpiCard}>
                     <div className={`${styles.kpiIcon} ${styles.green}`}>
+                        <Users size={24} />
+                    </div>
+                    <div className={styles.kpiData}>
+                        <span>Unique Customers</span>
+                        <h3>{totalUniqueCustomers}</h3>
+                        <p className={styles.subtext}>{repeatCustomers.length} repeat customers</p>
+                    </div>
+                </div>
+                <div className={styles.kpiCard}>
+                    <div className={`${styles.kpiIcon} ${styles.platinum}`}>
                         <Star size={24} />
                     </div>
                     <div className={styles.kpiData}>
@@ -67,22 +101,12 @@ export default function Analytics() {
                         <p className={styles.subtext}>AI agent tool calls</p>
                     </div>
                 </div>
-                <div className={styles.kpiCard}>
-                    <div className={`${styles.kpiIcon} ${styles.platinum}`}>
-                        <Users size={24} />
-                    </div>
-                    <div className={styles.kpiData}>
-                        <span>AI Interactions</span>
-                        <h3>{logs.length || 0}</h3>
-                        <p className={styles.subtext}>Recent chat sessions</p>
-                    </div>
-                </div>
             </div>
 
-            {/* AI Intelligence Charts */}
+            {/* Charts Row */}
             <div className={styles.chartGrid}>
                 <div className={styles.chartCard}>
-                    <h3>Agent Booking Velocity</h3>
+                    <h3>Revenue Trend</h3>
                     <div className={styles.chartHolder}>
                         <ResponsiveContainer width="100%" height={300}>
                             <LineChart data={data.revenueByDay}>
@@ -97,7 +121,7 @@ export default function Analytics() {
                 </div>
 
                 <div className={styles.chartCard}>
-                    <h3>Service Mix by Maya</h3>
+                    <h3>Service Mix</h3>
                     <div className={styles.chartHolder}>
                         <ResponsiveContainer width="100%" height={300}>
                             <PieChart>
@@ -121,28 +145,66 @@ export default function Analytics() {
                 </div>
             </div>
 
-            <div className={styles.reasoningLog}>
-                <h3>Live Reasoning Trace</h3>
-                <div className={styles.logList}>
-                    {logs.length > 0 ? logs.map((log, i) => (
-                        <div key={i} className={styles.logItem}>
-                            <span className={styles.timestamp}>{new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                            <span className={styles.event}>
-                                {log.event_type === 'tool_call'
-                                    ? `Executed ${log.payload.tool} for ${log.session_id.substr(0, 8)}`
-                                    : `Replied to engagement ${log.session_id.substr(0, 8)}`}
-                            </span>
-                            <span className={styles.outcome}>
-                                {log.event_type === 'tool_call' ? 'Tool Success' : 'Engagement Active'}
-                            </span>
-                        </div>
-                    )) : (
-                        <div className={styles.logItem}>
-                            <span className={styles.timestamp}>--:--</span>
-                            <span className={styles.event}>Waiting for Maya interaction...</span>
-                            <span className={styles.outcome}>Standby</span>
-                        </div>
-                    )}
+            {/* Repeat Customers + CSV Export */}
+            <div className={styles.chartGrid}>
+                <div className={styles.chartCard}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h3>Repeat Customers</h3>
+                        <button onClick={handleExportCSV} style={{
+                            background: 'var(--gold)',
+                            color: '#0a0a0a',
+                            border: 'none',
+                            borderRadius: '8px',
+                            padding: '6px 14px',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                            fontSize: '0.85rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                        }}>
+                            <Download size={14} /> Export CSV
+                        </button>
+                    </div>
+                    <div className={styles.logList}>
+                        {repeatCustomers.length > 0 ? repeatCustomers.map((c, i) => (
+                            <div key={i} className={styles.logItem}>
+                                <span className={styles.timestamp}>****{c.phone}</span>
+                                <span className={styles.event}>{c.count} bookings</span>
+                                <span className={styles.outcome}>Returning</span>
+                            </div>
+                        )) : (
+                            <div className={styles.logItem}>
+                                <span className={styles.event}>No repeat customers yet</span>
+                                <span className={styles.outcome}>—</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className={styles.chartCard}>
+                    <h3>Live Reasoning Trace</h3>
+                    <div className={styles.logList}>
+                        {logs.length > 0 ? logs.map((log, i) => (
+                            <div key={i} className={styles.logItem}>
+                                <span className={styles.timestamp}>{new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                <span className={styles.event}>
+                                    {log.event_type === 'tool_call'
+                                        ? `Executed ${log.payload.tool} for ${log.session_id.substr(0, 8)}`
+                                        : `Replied to engagement ${log.session_id.substr(0, 8)}`}
+                                </span>
+                                <span className={styles.outcome}>
+                                    {log.event_type === 'tool_call' ? 'Tool Success' : 'Engagement Active'}
+                                </span>
+                            </div>
+                        )) : (
+                            <div className={styles.logItem}>
+                                <span className={styles.timestamp}>--:--</span>
+                                <span className={styles.event}>Waiting for Maya interaction...</span>
+                                <span className={styles.outcome}>Standby</span>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

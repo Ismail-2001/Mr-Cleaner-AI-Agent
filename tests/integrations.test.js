@@ -34,6 +34,11 @@ vi.mock('@/lib/rate-limit', () => ({
     checkWebhookRateLimit: vi.fn().mockReturnValue(null),
 }));
 
+vi.mock('@/lib/redis', () => ({
+    getRedisClient: vi.fn().mockReturnValue(null),
+    tryRedisOp: vi.fn().mockResolvedValue(null),
+}));
+
 vi.mock('@/lib/supabase-admin', () => {
     const singleMock = vi.fn().mockResolvedValue({ data: null });
     const eqMock = vi.fn().mockReturnValue({ single: singleMock });

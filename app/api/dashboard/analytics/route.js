@@ -14,9 +14,9 @@ export async function GET() {
             supabaseAdmin.from('bookings').select('*').order('created_at', { ascending: false }),
         ]);
 
+        const bookings = bookingData.data || [];
+
         // REVENUE INTEGRITY: Only sum bookings with a known service_price.
-        // A null/zero price means the real price was never synced from the chat
-        // session — treating it as $0 would silently undercount revenue.
         const revenue = revenueResult.data?.reduce((sum, b) => {
             if (b.service_price !== null && b.service_price > 0) {
                 return sum + b.service_price;
@@ -24,7 +24,8 @@ export async function GET() {
             return sum;
         }, 0) || 0;
 
-        const revenueByDay = (bookingData.data || []).reduce((acc, b) => {
+        // ─── Revenue By Day (for line chart) ────────────────────────────────
+        const revenueByDay = bookings.reduce((acc, b) => {
             if (!b.booking_date) return acc;
             const day = new Date(b.booking_date).toLocaleDateString('en-US', { weekday: 'short' });
             const existing = acc.find(d => d.day === day);
@@ -34,12 +35,66 @@ export async function GET() {
             return acc;
         }, []);
 
-        const serviceDistribution = (bookingData.data || []).reduce((acc, b) => {
+        // ─── Service Distribution (for pie chart) ───────────────────────────
+        const serviceDistribution = bookings.reduce((acc, b) => {
             const existing = acc.find(s => s.name === b.service);
             if (existing) existing.value++;
             else acc.push({ name: b.service, value: 1 });
             return acc;
         }, []);
+
+        // ─── Trend Over Time (week-over-week revenue + bookings) ────────────
+        const now = new Date();
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+
+        let thisWeekRevenue = 0, lastWeekRevenue = 0;
+        let thisWeekBookings = 0, lastWeekBookings = 0;
+
+        for (const b of bookings) {
+            const d = new Date(b.booking_date);
+            const rev = (b.service_price !== null && b.service_price > 0) ? b.service_price : 0;
+            if (d >= weekAgo) {
+                thisWeekRevenue += rev;
+                thisWeekBookings++;
+            } else if (d >= twoWeeksAgo) {
+                lastWeekRevenue += rev;
+                lastWeekBookings++;
+            }
+        }
+
+        const trend = {
+            revenue: {
+                current: thisWeekRevenue,
+                previous: lastWeekRevenue,
+                change: lastWeekRevenue > 0
+                    ? Math.round(((thisWeekRevenue - lastWeekRevenue) / lastWeekRevenue) * 100)
+                    : thisWeekRevenue > 0 ? 100 : 0,
+            },
+            bookings: {
+                current: thisWeekBookings,
+                previous: lastWeekBookings,
+                change: lastWeekBookings > 0
+                    ? Math.round(((thisWeekBookings - lastWeekBookings) / lastWeekBookings) * 100)
+                    : thisWeekBookings > 0 ? 100 : 0,
+            },
+        };
+
+        // ─── Repeat Customers (phone number match) ──────────────────────────
+        const phoneCountMap = {};
+        for (const b of bookings) {
+            if (b.phone) {
+                const normalized = b.phone.replace(/\D/g, '');
+                phoneCountMap[normalized] = (phoneCountMap[normalized] || 0) + 1;
+            }
+        }
+        const repeatCustomers = Object.entries(phoneCountMap)
+            .filter(([, count]) => count > 1)
+            .map(([phone, count]) => ({ phone: phone.slice(-4), count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 10);
+
+        const totalUniqueCustomers = Object.keys(phoneCountMap).length;
 
         return Response.json({
             logs: logsResult.data || [],
@@ -50,7 +105,10 @@ export async function GET() {
             },
             revenueByDay,
             serviceDistribution,
-            bookings: bookingData.data || [],
+            trend,
+            repeatCustomers,
+            totalUniqueCustomers,
+            bookings,
         }, {
             headers: { 'Cache-Control': 'private, max-age=60, stale-while-revalidate=120' },
         });
