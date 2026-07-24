@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import styles from './ChatInterface.module.css';
-import { Send, X, Bot } from 'lucide-react';
+import { Send, X, Bot, Camera, Image as ImageIcon } from 'lucide-react';
 import BookingSummary from './BookingSummary';
 import ErrorBoundary from './ErrorBoundary';
 import { supabase } from '@/lib/supabase';
@@ -66,10 +66,13 @@ export default function ChatInterface({ onClose, initialMessage }) {
     const [showSummary, setShowSummary] = useState(false);
     const [sessionId, setSessionId] = useState(null);
     const [isLoadingSession, setIsLoadingSession] = useState(true);
+    const [pendingImages, setPendingImages] = useState([]); // {url, path, uploading}
+    const [isUploading, setIsUploading] = useState(false);
     const messagesEndRef = useRef(null);
     const messagesRef = useRef(messages);
     const overlayRef = useRef(null);
     const inputRef = useRef(null);
+    const fileInputRef = useRef(null);
 
     // Focus trap
     useEffect(() => {
@@ -176,15 +179,20 @@ export default function ChatInterface({ onClose, initialMessage }) {
         }
     }, [initialMessage, isLoadingSession]);
 
-    const handleSend = useCallback(async (text) => {
+    const handleSend = useCallback(async (text, imageUrls = []) => {
         const messageText = text || input;
-        if (!messageText.trim()) return;
+        if (!messageText.trim() && imageUrls.length === 0) return;
 
-        const newUserMessage = { role: 'user', content: messageText };
+        const newUserMessage = {
+            role: 'user',
+            content: messageText || (imageUrls.length > 0 ? 'Please analyze my vehicle photo.' : ''),
+            ...(imageUrls.length > 0 ? { image_urls: imageUrls } : {}),
+        };
         const updatedMessages = [...messagesRef.current, newUserMessage];
         setMessages(updatedMessages);
         messagesRef.current = updatedMessages;
         setInput('');
+        setPendingImages([]);
         setIsTyping(true);
 
         try {
@@ -234,6 +242,79 @@ export default function ChatInterface({ onClose, initialMessage }) {
             }]);
         }
     }, [input, sessionId]);
+
+    const handlePhotoSelect = useCallback(async (e) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+
+        // Reset file input so same file can be re-selected
+        e.target.value = '';
+
+        const newImages = files.slice(0, 5 - pendingImages.length).map(f => ({
+            file: f,
+            preview: URL.createObjectURL(f),
+            uploading: true,
+            url: null,
+            path: null,
+        }));
+
+        setPendingImages(prev => [...prev, ...newImages]);
+        setIsUploading(true);
+
+        // Upload each file
+        for (let i = 0; i < newImages.length; i++) {
+            const img = newImages[i];
+            try {
+                const formData = new FormData();
+                formData.append('file', img.file);
+                formData.append('session_id', sessionId || 'anonymous');
+
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.error?.message || 'Upload failed');
+                }
+
+                const data = await response.json();
+                setPendingImages(prev => prev.map((p, idx) =>
+                    p.preview === img.preview ? { ...p, uploading: false, url: data.url, path: data.path } : p
+                ));
+            } catch (err) {
+                console.error('Photo upload error:', err);
+                setPendingImages(prev => prev.filter(p => p.preview !== img.preview));
+                setMessages(prev => [...prev, {
+                    role: 'assistant',
+                    content: `Couldn't upload photo: ${err.message}. Please try a different image.`,
+                }]);
+            }
+        }
+
+        setIsUploading(false);
+    }, [pendingImages.length, sessionId]);
+
+    const removePendingImage = useCallback((preview) => {
+        setPendingImages(prev => {
+            const img = prev.find(p => p.preview === preview);
+            if (img) URL.revokeObjectURL(img.preview);
+            return prev.filter(p => p.preview !== preview);
+        });
+    }, []);
+
+    const triggerPhotoUpload = useCallback(() => {
+        fileInputRef.current?.click();
+    }, []);
+
+    const canSend = (input.trim() || pendingImages.some(i => i.url)) && !isTyping && !isUploading;
+
+    const handleSendClick = useCallback(() => {
+        if (!canSend) return;
+        const urls = pendingImages.filter(i => i.url).map(i => i.url);
+        handleSend(input, urls);
+    }, [canSend, input, pendingImages, handleSend]);
 
     const confirmBooking = async () => {
         try {
@@ -359,22 +440,60 @@ export default function ChatInterface({ onClose, initialMessage }) {
 
                         <div className={styles.inputArea}>
                             <input
-                                ref={inputRef}
-                                type="text"
-                                aria-label="Type your message to Maya"
-                                placeholder={isTyping ? "Maya is thinking..." : "Type your message..."}
-                                value={input}
-                                onChange={(e) => setInput(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && !isTyping && handleSend()}
-                                disabled={isTyping}
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                multiple
+                                capture="environment"
+                                onChange={handlePhotoSelect}
+                                style={{ display: 'none' }}
+                                aria-label="Upload vehicle photo"
                             />
-                            <button
-                                onClick={() => handleSend()}
-                                className={styles.sendBtn}
-                                disabled={!input.trim() || isTyping}
-                            >
-                                {isTyping ? <div className={styles.spinner}></div> : <Send size={20} />}
-                            </button>
+                            {pendingImages.length > 0 && (
+                                <div className={styles.imagePreviewRow}>
+                                    {pendingImages.map((img) => (
+                                        <div key={img.preview} className={styles.imagePreview}>
+                                            <img src={img.preview} alt="Vehicle photo" />
+                                            {img.uploading && <div className={styles.uploadOverlay}><div className={styles.spinner}></div></div>}
+                                            <button
+                                                className={styles.removeImageBtn}
+                                                onClick={() => removePendingImage(img.preview)}
+                                                aria-label="Remove photo"
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            <div className={styles.inputRow}>
+                                <button
+                                    onClick={triggerPhotoUpload}
+                                    className={styles.cameraBtn}
+                                    disabled={isTyping || isUploading || pendingImages.length >= 5}
+                                    aria-label="Upload vehicle photo"
+                                    title="Send a vehicle photo"
+                                >
+                                    <Camera size={20} />
+                                </button>
+                                <input
+                                    ref={inputRef}
+                                    type="text"
+                                    aria-label="Type your message to Maya"
+                                    placeholder={isTyping ? "Maya is thinking..." : pendingImages.length > 0 ? "Add a message (optional)..." : "Type your message..."}
+                                    value={input}
+                                    onChange={(e) => setInput(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && !isTyping && handleSendClick()}
+                                    disabled={isTyping}
+                                />
+                                <button
+                                    onClick={handleSendClick}
+                                    className={styles.sendBtn}
+                                    disabled={!canSend}
+                                >
+                                    {isTyping ? <div className={styles.spinner}></div> : <Send size={20} />}
+                                </button>
+                            </div>
                         </div>
                     </ErrorBoundary>
                 </motion.div>

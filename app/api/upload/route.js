@@ -1,0 +1,105 @@
+/**
+ * POST /api/upload — Vehicle photo upload for chat
+ *
+ * Accepts multipart/form-data with:
+ *   - file: Image file (JPEG/PNG/WebP, max 5MB)
+ *   - session_id: Chat session ID
+ *
+ * Returns:
+ *   - { url, path, width, height, sizeBytes } on success
+ *
+ * SECURITY:
+ *   - Max 5MB file size enforced server-side
+ *   - Magic byte validation (not just Content-Type header)
+ *   - Session ID validation (alphanumeric + dash/underscore, max 100)
+ *   - Rate limited: 5 uploads/min per IP
+ */
+
+import { processAndUploadPhoto, detectImageMime } from '@/lib/photo-upload';
+import { checkBookingRateLimit } from '@/lib/rate-limit';
+
+export async function POST(req) {
+    const requestId = crypto.randomUUID();
+
+    // RATE LIMITING: Reuse booking limiter (5/min per IP)
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+        || req.headers.get('x-real-ip')
+        || '127.0.0.1';
+    const rateLimit = await checkBookingRateLimit(ip);
+    if (rateLimit) {
+        return Response.json(
+            { error: { code: 'RATE_LIMITED', message: `Too many uploads. Try again in ${rateLimit.retryAfterSec}s.` } },
+            { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfterSec) } }
+        );
+    }
+
+    try {
+        const contentType = req.headers.get('content-type') || '';
+
+        // Parse multipart form data
+        if (!contentType.includes('multipart/form-data')) {
+            return Response.json(
+                { error: { code: 'INVALID_CONTENT_TYPE', message: 'Expected multipart/form-data' } },
+                { status: 400 }
+            );
+        }
+
+        const formData = await req.formData();
+        const file = formData.get('file');
+        const sessionId = formData.get('session_id');
+
+        if (!file || typeof file === 'string') {
+            return Response.json(
+                { error: { code: 'MISSING_FILE', message: 'No file provided' } },
+                { status: 400 }
+            );
+        }
+
+        // Validate session ID
+        const safeSessionId = sessionId && /^[a-zA-Z0-9_-]{1,100}$/.test(sessionId)
+            ? sessionId
+            : 'anonymous';
+
+        // Read file as buffer
+        const buffer = Buffer.from(await file.arrayBuffer());
+
+        // Detect actual mime type from magic bytes (don't trust Content-Type header)
+        const detectedMime = detectImageMime(buffer);
+        if (!detectedMime) {
+            return Response.json(
+                { error: { code: 'INVALID_IMAGE', message: 'File is not a valid image. Please send a JPEG, PNG, or WebP photo.' } },
+                { status: 400 }
+            );
+        }
+
+        // Process and upload
+        const result = await processAndUploadPhoto(
+            buffer,
+            detectedMime,
+            safeSessionId,
+        );
+
+        if (!result.success) {
+            return Response.json(
+                { error: { code: 'UPLOAD_FAILED', message: result.error } },
+                { status: result.status || 500 }
+            );
+        }
+
+        console.log(`[${requestId}] Photo uploaded: ${result.path} (${result.width}x${result.height}, ${result.sizeBytes} bytes)`);
+
+        return Response.json({
+            url: result.url,
+            path: result.path,
+            width: result.width,
+            height: result.height,
+            sizeBytes: result.sizeBytes,
+        });
+    } catch (error) {
+        console.error(`[${requestId}] Upload error:`, error.message);
+        return Response.json(
+            { error: { code: 'UPLOAD_FAILED', message: 'Failed to upload photo. Please try again.' } },
+            { status: 500 }
+        );
+    }
+}

@@ -4,7 +4,7 @@ import { resolveBusinessId } from '@/lib/tenant';
 
 export async function GET(req) {
     const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
-    const rateLimit = checkBookingRateLimit(ip);
+    const rateLimit = await checkBookingRateLimit(ip);
     if (rateLimit) {
         return Response.json(
             { error: { code: 'RATE_LIMITED', message: `Try again in ${rateLimit.retryAfterSec}s.` } },

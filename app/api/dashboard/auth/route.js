@@ -17,7 +17,7 @@ export async function POST(req) {
     // RATE LIMITING: 5 login attempts per 15 minutes per IP.
     // Prevents brute-force attacks on the dashboard password.
     const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
-    const rateLimit = checkLoginRateLimit(ip);
+    const rateLimit = await checkLoginRateLimit(ip);
     if (rateLimit) {
         console.log(`[${requestId}] Login rate limited ip=${ip}`);
         return Response.json(

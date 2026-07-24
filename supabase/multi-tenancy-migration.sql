@@ -92,6 +92,33 @@ ALTER TABLE businesses ADD COLUMN IF NOT EXISTS instagram_id TEXT;
 CREATE INDEX IF NOT EXISTS idx_businesses_page_id ON businesses (page_id) WHERE page_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_businesses_instagram_id ON businesses (instagram_id) WHERE instagram_id IS NOT NULL;
 
+-- Google Business Profile integration
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS google_account_id TEXT;
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS google_location_id TEXT;
+CREATE INDEX IF NOT EXISTS idx_businesses_google_location ON businesses (google_location_id) WHERE google_location_id IS NOT NULL;
+
+-- Jobber CRM integration
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS jobber_job_id TEXT;
+CREATE INDEX IF NOT EXISTS idx_bookings_jobber_job ON bookings (jobber_job_id) WHERE jobber_job_id IS NOT NULL;
+
+-- Integrations table: stores OAuth tokens for connected services
+CREATE TABLE IF NOT EXISTS integrations (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  business_id UUID REFERENCES businesses(id) NOT NULL,
+  provider TEXT NOT NULL,               -- 'jobber' | 'google' | 'stripe'
+  access_token TEXT,
+  refresh_token TEXT,
+  expires_at TIMESTAMPTZ,
+  provider_account_id TEXT,
+  connected_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(business_id, provider)
+);
+
+ALTER TABLE integrations ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS idx_integrations_business ON integrations (business_id);
+CREATE INDEX IF NOT EXISTS idx_integrations_provider ON integrations (business_id, provider);
+
 -- DAILY SUMMARY: Track daily digest send status per business
 CREATE TABLE IF NOT EXISTS daily_summaries (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,

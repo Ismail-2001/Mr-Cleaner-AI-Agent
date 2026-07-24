@@ -56,7 +56,7 @@ export async function POST(req) {
         || req.headers.get('x-real-ip')
         || '127.0.0.1';
 
-    const rateLimit = checkWebhookRateLimit(ip);
+    const rateLimit = await checkWebhookRateLimit(ip);
     if (rateLimit) {
         console.log(`[${requestId}] Meta webhook rate limited ip=${ip}`);
         return Response.json({ status: 'rate_limited' }, {

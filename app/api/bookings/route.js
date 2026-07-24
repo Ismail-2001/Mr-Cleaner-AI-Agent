@@ -115,7 +115,7 @@ export async function POST(req) {
     // RATE LIMITING: 5 booking attempts per minute per IP.
     // Prevents spam bookings that burn Twilio SMS credits and flood the calendar.
     const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
-    const rateLimit = checkBookingRateLimit(ip);
+    const rateLimit = await checkBookingRateLimit(ip);
     if (rateLimit) {
         console.log(`[${requestId}] Booking rate limited ip=${ip}`);
         return Response.json(

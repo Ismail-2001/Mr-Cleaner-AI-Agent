@@ -37,18 +37,19 @@ DEEPSEEK_API_KEY         — DeepSeek fallback disabled
 GEMINI_API_KEY           — Falls back to simulation mode (Maya says "simulation mode")
 GOOGLE_CALENDAR_CLIENT_ID + GOOGLE_CALENDAR_CLIENT_SECRET — Calendar sync disabled
 OPENWEATHER_API_KEY      — Weather forecasts disabled
+UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN — Rate limiter falls back to in-memory (cold-start unsafe)
 ```
 
 ## 4. Technical Limitations
 
-- **Rate Limiting**: Chat API limited to 20 req/min per session + 30 req/min per IP (backstop); bookings POST limited to 5/min per IP
+- **Rate Limiting**: Chat API limited to 20 req/min per session + 30 req/min per IP (backstop); bookings POST limited to 5/min per IP; webhook endpoints 60/min per IP. When Redis is configured, limits persist across serverless cold starts.
 - **CSRF Protection**: POST/PUT/DELETE requests require Origin/Referer matching
 - **Session Expiry**: Dashboard sessions expire after 8 hours (configurable in `lib/session.js`)
 - **File Uploads**: Not implemented (codebase uses text-only chat)
 - **Multi-Tenancy**: Single-tenant install by default; multi-tenancy architecture planned but not deployed
 - **Google Calendar**: Requires manual OAuth setup in Google Cloud Console (step-by-step guide below)
 - **CSP**: Uses `unsafe-inline` and `unsafe-eval` required by Next.js hydration. To remove, implement nonce-based CSP with `next/script` nonce prop.
-- **Rate Limiter Storage**: In-memory (Map-based). Resets on server restart, doesn't work across Vercel serverless instances. Before scaling, migrate to Redis or Supabase-backed rate limiting.
+- **Rate Limiter Storage**: Hybrid — Redis (Upstash/Vercel KV) when `UPSTASH_REDIS_REST_URL` env var is set, in-memory Map fallback otherwise. In-memory mode resets on cold start and doesn't work across instances. Set Upstash env vars for production persistence.
 
 ## 5. Google Calendar Setup Guide (Required for Booking Sync)
 
@@ -69,7 +70,7 @@ OPENWEATHER_API_KEY      — Weather forecasts disabled
 | RLS Policies | ✅ All tables have RLS enforced |
 | Auth | ✅ Server-side JWT auth (no client-side password check) |
 | CSRF | ✅ Origin/Referer validation on state-changing requests |
-| Rate Limiting | ✅ Per-session + IP-based rate limiting (30/min IP backstop) |
+| Rate Limiting | ✅ Redis-backed (Upstash) with in-memory fallback; per-session + IP-based |
 | Input Validation | ✅ Zod schemas on all API endpoints |
 | Session Revocation | ✅ Logout immediately invalidates JWT |
 | PII Redaction | ✅ Customer names/phones redacted from logs (args + results) |

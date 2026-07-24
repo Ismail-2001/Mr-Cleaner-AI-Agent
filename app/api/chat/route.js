@@ -22,7 +22,7 @@ export async function POST(req) {
         sessionId = SESSION_ID_REGEX.test(rawSessionId) ? rawSessionId : 'anonymous';
     }
 
-    const rateLimit = checkRateLimit(sessionId);
+    const rateLimit = await checkRateLimit(sessionId);
     if (rateLimit) {
         console.log(`[${requestId}] Rate limited session=${sessionId}`);
         return Response.json(
@@ -34,7 +34,7 @@ export async function POST(req) {
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
         || req.headers.get('x-real-ip')
         || '127.0.0.1';
-    const ipRateLimit = checkChatIpRateLimit(ip);
+    const ipRateLimit = await checkChatIpRateLimit(ip);
     if (ipRateLimit) {
         console.log(`[${requestId}] IP rate limited ip=${ip}`);
         return Response.json(
