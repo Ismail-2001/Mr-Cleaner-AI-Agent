@@ -66,10 +66,14 @@ export async function POST(req) {
             // BUG FIX (idempotency): Check if a booking with this Stripe session
             // already exists. Stripe retries webhooks — without this guard, each
             // retry creates a duplicate booking.
+            //
+            // PREVIOUS: Matched on notes string (fragile, depends on exact formatting).
+            // NOW: Matches on stripe_session_id column (dedicated, indexed, UNIQUE).
+            // NULL = NULL is FALSE in SQL, so old bookings without this column are safe.
             const { data: existingBooking } = await supabaseAdmin
                 .from('bookings')
                 .select('id')
-                .eq('notes', `Deposit paid via Stripe. Session: ${session.id}`)
+                .eq('stripe_session_id', session.id)
                 .limit(1)
                 .maybeSingle();
 
@@ -140,6 +144,7 @@ export async function POST(req) {
                         address: mergedCustomerData.address || '',
                         zip_code: mergedCustomerData.zip_code || '',
                         status: 'confirmed',
+                        stripe_session_id: session.id,
                         notes: `Deposit paid via Stripe. Session: ${session.id}${servicePrice === null ? ' (price missing from chat session)' : ''}`,
                     }]);
 

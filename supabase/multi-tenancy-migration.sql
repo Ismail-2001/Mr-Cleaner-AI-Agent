@@ -130,3 +130,18 @@ CREATE TABLE IF NOT EXISTS daily_summaries (
   sent_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(business_id, summary_date)
 );
+
+-- STRIPE WEBHOOK IDEMPOTENCY: Add stripe_session_id column to bookings with
+-- UNIQUE constraint. This replaces the fragile notes-string match for idempotency
+-- checks. Stripe retries webhooks — without this, each retry creates a duplicate
+-- booking. The UNIQUE constraint is the database-level safety net; the application
+-- also checks before inserting.
+--
+-- NOTE: Existing production rows will have NULL stripe_session_id (they were created
+-- before this column existed). NULL = NULL evaluates to FALSE in SQL, so the
+-- idempotency query .eq('stripe_session_id', session.id) will NOT accidentally
+-- match old rows. This is safe to run on production data without a backfill.
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS stripe_session_id TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_stripe_session
+  ON bookings (stripe_session_id)
+  WHERE stripe_session_id IS NOT NULL;

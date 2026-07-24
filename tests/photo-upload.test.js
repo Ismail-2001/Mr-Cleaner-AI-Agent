@@ -1,14 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { detectImageMime } from '@/lib/photo-upload';
+import { detectImageMime, getSignedPhotoUrl } from '@/lib/photo-upload';
 
 // ─── Mocks ───────────────────────────────────────────────────────────────────
+
+const mockCreateSignedUrl = vi.fn().mockResolvedValue({
+    data: { signedUrl: 'https://example.com/signed/photo.jpg?token=abc123' },
+    error: null,
+});
 
 vi.mock('@/lib/supabase-admin', () => ({
     supabaseAdmin: {
         storage: {
             from: vi.fn(() => ({
                 upload: vi.fn().mockResolvedValue({ data: { path: 'test/photo.jpg' }, error: null }),
-                getPublicUrl: vi.fn().mockReturnValue({ data: { publicUrl: 'https://example.com/photo.jpg' } }),
+                createSignedUrl: (...args) => mockCreateSignedUrl(...args),
             })),
         },
         from: vi.fn(() => ({
@@ -136,5 +141,25 @@ describe('ChatRequestSchema with image_urls', () => {
             }],
         });
         expect(result.success).toBe(true);
+    });
+});
+
+// ─── Signed URL Refresh ──────────────────────────────────────────────────────
+
+describe('getSignedPhotoUrl', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('returns a fresh signed URL for a valid storage path', async () => {
+        const result = await getSignedPhotoUrl('session123/photo.jpg');
+        expect(result.signedUrl).toBe('https://example.com/signed/photo.jpg?token=abc123');
+        expect(mockCreateSignedUrl).toHaveBeenCalledWith('session123/photo.jpg', 604800);
+    });
+
+    it('returns error when storage fails', async () => {
+        mockCreateSignedUrl.mockResolvedValueOnce({ data: null, error: { message: 'Not found' } });
+        const result = await getSignedPhotoUrl('nonexistent/photo.jpg');
+        expect(result.error).toBeDefined();
     });
 });
