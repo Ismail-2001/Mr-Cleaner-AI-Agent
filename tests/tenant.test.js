@@ -37,13 +37,24 @@ describe('resolveBusinessId', () => {
         expect(await resolveBusinessId(req1)).toBe(await resolveBusinessId(req2));
     });
 
-    it('accepts valid x-business-id header', async () => {
+    it('accepts valid x-business-id header when env var is set', async () => {
+        process.env.ALLOW_HEADER_BUSINESS_ID = 'true';
         const customId = '11111111-1111-1111-1111-111111111111';
         const req = new Request('https://app.test/api/chat', {
             headers: { 'x-business-id': customId },
         });
         const id = await resolveBusinessId(req);
         expect(id).toBe(customId);
+        delete process.env.ALLOW_HEADER_BUSINESS_ID;
+    });
+
+    it('ignores x-business-id header by default (security)', async () => {
+        const customId = '22222222-2222-2222-2222-222222222222';
+        const req = new Request('https://app.test/api/chat', {
+            headers: { 'x-business-id': customId },
+        });
+        const id = await resolveBusinessId(req);
+        expect(id).toBe(DEFAULT_BUSINESS_ID);
     });
 
     it('rejects invalid UUID format in x-business-id header', async () => {
