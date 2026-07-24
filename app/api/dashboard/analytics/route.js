@@ -1,17 +1,39 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { verifySession, COOKIE_NAME } from '@/lib/session';
+import { DEFAULT_BUSINESS_ID } from '@/lib/tenant';
 
-export async function GET() {
+/**
+ * GET /api/dashboard/analytics — owner dashboard analytics
+ *
+ * SECURITY: business_id scoping on ALL queries. Without this, a multi-tenant
+ * deployment would leak every business's revenue, bookings, and customer data
+ * to any authenticated dashboard owner.
+ *
+ * Auth: Session cookie verified at handler level (defense-in-depth).
+ * Middleware also protects GET /api/dashboard/*, but we verify here too.
+ */
+export async function GET(req) {
+    // AUTH: Verify dashboard session cookie
+    const cookie = req.cookies.get(COOKIE_NAME);
+    const { valid } = await verifySession(cookie?.value);
+    if (!valid) {
+        return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     if (!supabaseAdmin) {
         return Response.json({ error: 'Database not configured' }, { status: 503 });
     }
 
+    // Business scope — all queries filtered to this business only
+    const businessId = DEFAULT_BUSINESS_ID;
+
     try {
         const [logsResult, inspectionsResult, bookingsCountResult, revenueResult, bookingData] = await Promise.all([
-            supabaseAdmin.from('usage_logs').select('*').order('created_at', { ascending: false }).limit(5),
-            supabaseAdmin.from('usage_logs').select('id', { count: 'exact', head: true }).eq('event_type', 'tool_call'),
-            supabaseAdmin.from('bookings').select('id', { count: 'exact', head: true }),
-            supabaseAdmin.from('bookings').select('service_price').not('status', 'eq', 'cancelled'),
-            supabaseAdmin.from('bookings').select('*').order('created_at', { ascending: false }),
+            supabaseAdmin.from('usage_logs').select('*').eq('business_id', businessId).order('created_at', { ascending: false }).limit(5),
+            supabaseAdmin.from('usage_logs').select('id', { count: 'exact', head: true }).eq('business_id', businessId).eq('event_type', 'tool_call'),
+            supabaseAdmin.from('bookings').select('id', { count: 'exact', head: true }).eq('business_id', businessId),
+            supabaseAdmin.from('bookings').select('service_price').eq('business_id', businessId).not('status', 'eq', 'cancelled'),
+            supabaseAdmin.from('bookings').select('*').eq('business_id', businessId).order('created_at', { ascending: false }),
         ]);
 
         const bookings = bookingData.data || [];

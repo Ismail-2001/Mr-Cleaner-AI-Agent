@@ -3,19 +3,39 @@
  *
  * Downloads a CSV file of all bookings for the business owner
  * to share with accountant/bookkeeper.
+ *
+ * SECURITY: business_id scoping on query. Without this, a multi-tenant
+ * deployment would export ALL businesses' customer names and phone numbers
+ * (PII) in a single CSV file — a critical data breach.
+ *
+ * Auth: Session cookie verified at handler level (defense-in-depth).
+ * Middleware also protects GET /api/dashboard/*, but we verify here too.
  */
 
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { verifySession, COOKIE_NAME } from '@/lib/session';
+import { DEFAULT_BUSINESS_ID } from '@/lib/tenant';
 
-export async function GET() {
+export async function GET(req) {
+    // AUTH: Verify dashboard session cookie
+    const cookie = req.cookies.get(COOKIE_NAME);
+    const { valid } = await verifySession(cookie?.value);
+    if (!valid) {
+        return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     if (!supabaseAdmin) {
         return Response.json({ error: 'Database not configured' }, { status: 503 });
     }
+
+    // Business scope — only export bookings belonging to this business
+    const businessId = DEFAULT_BUSINESS_ID;
 
     try {
         const { data: bookings, error } = await supabaseAdmin
             .from('bookings')
             .select('customer_name, phone, service, service_price, vehicle_type, booking_date, booking_time, status, created_at')
+            .eq('business_id', businessId)
             .order('booking_date', { ascending: false });
 
         if (error) {
